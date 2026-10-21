@@ -34,4 +34,9 @@ umask 022
 # Components must not see the task role: drop the ECS credential pointer before Greengrass starts.
 unset AWS_CONTAINER_CREDENTIALS_RELATIVE_URI AWS_CONTAINER_CREDENTIALS_FULL_URI AWS_CONTAINER_AUTHORIZATION_TOKEN
 export INIT_CONFIG="$CFG_DIR/config.yaml"
+# The nucleus logs to files under its root; mirror them to stdout so they reach CloudWatch Logs.
+(
+  while [ ! -f /greengrass/v2/logs/greengrass.log ]; do sleep 2; done
+  exec tail -n +1 -F /greengrass/v2/logs/greengrass.log /greengrass/v2/logs/com.example.EdgeModel.log 2>/dev/null
+) &
 exec /greengrass-entrypoint.sh
