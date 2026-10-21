@@ -105,7 +105,10 @@ def main() -> None:
     started = dt.datetime.now(dt.UTC)
     results: list = []
     print(f"== e2e task (run {rid})")
-    arns = ctx.run_tasks("simulator", [{"SCENARIO": "e2e", "RUN_ID": rid, "TASK_INDEX": "90",
+    # A fresh pair of device identities per run: the per-device hourly upload limit (found in testing)
+    # refuses a device that already uploaded the injection set within the hour.
+    idx = 60 + int(time.time() // 60) % 40
+    arns = ctx.run_tasks("simulator", [{"SCENARIO": "e2e", "RUN_ID": rid, "TASK_INDEX": str(idx),
                                         "IOT_ENDPOINT": ctx.iot_endpoint, "INJECTION_SET": "1" if args.injection else "0"}],
                          started_by=rid)
     status = ctx.wait_tasks(arns, timeout_s=3600 if args.injection else 1200)
