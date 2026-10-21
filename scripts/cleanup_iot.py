@@ -12,7 +12,9 @@ list APIs are paginated. A failing step prints a warning and the script continue
 from __future__ import annotations
 
 import argparse
+import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import boto3
 from guards import load_params, mask_text
@@ -77,12 +79,52 @@ def find_residuals(sess, prefix: str) -> dict:
     return out
 
 
+def _retry(what: str, fn, codes: tuple[str, ...], attempts: int = 12):
+    for attempt in range(attempts):
+        try:
+            return fn()
+        except Exception as exc:  # noqa: BLE001
+            code = getattr(exc, "response", {}).get("Error", {}).get("Code", type(exc).__name__)
+            if code in codes and attempt < attempts - 1:
+                time.sleep(min(60, 5 * (attempt + 1)))
+                continue
+            if code == "ResourceNotFoundException":
+                return None
+            print(mask_text(f"WARNING: {what}: {code} (continuing)"))
+            return None
+
+
 def _try(what: str, fn, *a, **kw):
     try:
         return fn(*a, **kw)
     except Exception as exc:  # noqa: BLE001 - warn and continue
         print(mask_text(f"WARNING: {what}: {type(exc).__name__} {str(exc)[:160]} (continuing)"))
         return None
+
+
+CERT_WORKERS = 8
+
+
+def _remove_certificate(iot, cert_arn: str, attached: list[str]) -> None:
+    """Detach policies and things, set INACTIVE, delete (retrying while detach operations settle)."""
+    cid = cert_arn.rsplit("/", 1)[-1]
+    for pol in [p["policyName"] for p in _pages(iot, "list_attached_policies", "policies", target=cert_arn)]:
+        _try("detach policy", iot.detach_policy, policyName=pol, target=cert_arn)
+    for a in attached:
+        if a.startswith("thing:"):
+            _try("detach thing", iot.detach_thing_principal, thingName=a[6:], principal=cert_arn)
+    _try("deactivate certificate", iot.update_certificate, certificateId=cid, newStatus="INACTIVE")
+    for attempt in range(8):
+        try:
+            iot.delete_certificate(certificateId=cid)
+            return
+        except iot.exceptions.ResourceNotFoundException:
+            return
+        except (iot.exceptions.DeleteConflictException, iot.exceptions.ThrottlingException):
+            time.sleep(2 * (attempt + 1))
+        except Exception as exc:  # noqa: BLE001
+            print(mask_text(f"WARNING: delete certificate: {type(exc).__name__} (continuing)"))
+            return
 
 
 def stop_tasks(sess, prefix: str) -> None:
@@ -109,7 +151,8 @@ def clean(sess, prefix: str, dry_run: bool) -> dict:
     for d in res["gg_deployments"]:
         if d["status"] == "ACTIVE":
             _try("cancel deployment", gg.cancel_deployment, deploymentId=d["id"])
-        _try("delete deployment", gg.delete_deployment, deploymentId=d["id"])
+        # Found in testing: DeleteDeployment is throttled by the IoT Jobs deletion quota; back off and retry.
+        _retry("delete deployment", lambda d=d: gg.delete_deployment(deploymentId=d["id"]), ("ThrottlingException",))
     for c in res["gg_core_devices"]:
         _try("delete core device", gg.delete_core_device, coreDeviceThingName=c)
     for arn in res["gg_components"]:
@@ -120,32 +163,19 @@ def clean(sess, prefix: str, dry_run: bool) -> dict:
         for j in _pages(iot, "list_jobs", "jobs", thingGroupName=g):
             jobs.add(j["jobId"])
     for j in jobs:
-        _try("cancel job", iot.cancel_job, jobId=j, force=True)
-        _try("delete job", iot.delete_job, jobId=j, force=True)
-    for cert_arn, attached in res["certificates"].items():
-        cid = cert_arn.rsplit("/", 1)[-1]
-        for pol in [p["policyName"] for p in _pages(iot, "list_attached_policies", "policies", target=cert_arn)]:
-            _try("detach policy", iot.detach_policy, policyName=pol, target=cert_arn)
-        for a in attached:
-            if a.startswith("thing:"):
-                _try("detach thing", iot.detach_thing_principal, thingName=a[6:], principal=cert_arn)
-        _try("deactivate certificate", iot.update_certificate, certificateId=cid, newStatus="INACTIVE")
-    time.sleep(5)  # detach operations are eventually consistent
-    for cert_arn in res["certificates"]:
-        cid = cert_arn.rsplit("/", 1)[-1]
-        for attempt in range(6):
-            try:
-                iot.delete_certificate(certificateId=cid)
-                break
-            except iot.exceptions.DeleteConflictException:
-                time.sleep(5 * (attempt + 1))
-            except iot.exceptions.ResourceNotFoundException:
-                break
-            except Exception as exc:  # noqa: BLE001
-                print(mask_text(f"WARNING: delete certificate: {type(exc).__name__} (continuing)"))
-                break
-    for t in res["things"]:
-        _try("delete thing", iot.delete_thing, thingName=t)
+        status = (_try("describe job", iot.describe_job, jobId=j) or {}).get("job", {}).get("status")
+        if status in ("IN_PROGRESS", "SCHEDULED"):
+            _try("cancel job", iot.cancel_job, jobId=j, force=True)
+        if status != "DELETION_IN_PROGRESS":
+            # Found in testing: at most 10 jobs can be deleting at once (LimitExceededException).
+            _retry("delete job", lambda j=j: iot.delete_job(jobId=j, force=True),
+                   ("LimitExceededException", "ThrottlingException"))
+    # Found in testing: thousands of load-test certificates take long one by one, so certificates are
+    # removed with bounded concurrency (the IoT control-plane APIs are rate limited; retries back off).
+    with ThreadPoolExecutor(max_workers=CERT_WORKERS) as pool:
+        list(pool.map(lambda item: _remove_certificate(iot, *item), res["certificates"].items()))
+    with ThreadPoolExecutor(max_workers=CERT_WORKERS) as pool:
+        list(pool.map(lambda t: _try("delete thing", iot.delete_thing, thingName=t), res["things"]))
     after = find_residuals(sess, prefix)
     print(mask_text(f"left after IoT cleanup: things={len(after['things'])} certificates={len(after['certificates'])} "
                     f"jobs={len(after['jobs'])} gg_cores={len(after['gg_core_devices'])} "
@@ -154,6 +184,7 @@ def clean(sess, prefix: str, dry_run: bool) -> dict:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(line_buffering=True)  # progress is visible while the script runs
     ap = argparse.ArgumentParser()
     ap.add_argument("--params")
     ap.add_argument("--dry-run", action="store_true")
