@@ -235,9 +235,6 @@ class EdgeBox:
         base = f"$aws/things/{self.thing}/jobs"
         await self.t.subscribe(f"{base}/notify-next", lambda t, p: self._spawn(self._next_job()))
         await self.t.subscribe(f"{base}/start-next/accepted", self._on_start_next)
-        await self.t.subscribe(f"{base}/start-next/rejected", lambda t, p: None)
-        await self.t.subscribe(f"{base}/+/update/accepted", lambda t, p: None)
-        await self.t.subscribe(f"{base}/+/update/rejected", lambda t, p: None)
         await self._next_job()
 
     def _spawn(self, coro) -> None:

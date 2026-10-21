@@ -25,47 +25,26 @@ def _arn(partition: str, region: str, account: str, kind: str, rest: str) -> str
 
 
 def device_policy(partition: str, region: str, account: str) -> dict:
-    """Policy attached to every simulated edge box certificate."""
+    """Policy attached to every simulated edge box certificate.
+
+    AWS IoT limits a policy document to 2048 characters (found in testing; see the IoT Core quota
+    page), so the document lists only the topics the device uses and carries no statement ids.
+    """
     a = lambda kind, rest: _arn(partition, region, account, kind, rest)  # noqa: E731
     t = THING_VAR
-    pub = [naming.HEARTBEAT, naming.UPLOAD_REQUEST, naming.IMAGE_UPLOADED]
-    sub = [naming.UPLOAD_URL, naming.RESULTS]
     jobs = f"$aws/things/{t}/jobs"
+    pub = [f"{naming.TOPIC_ROOT}/{t}/{s}" for s in (naming.HEARTBEAT, naming.UPLOAD_REQUEST, naming.IMAGE_UPLOADED)]
+    down = [f"{naming.TOPIC_ROOT}/{t}/{s}" for s in (naming.UPLOAD_URL, naming.RESULTS)]
+    job_down = [f"{jobs}/notify-next", f"{jobs}/start-next/accepted"]
     return {
         "Version": "2012-10-17",
         "Statement": [
-            {
-                "Sid": "ConnectAsOwnThingOnly",
-                "Effect": "Allow",
-                "Action": "iot:Connect",
-                "Resource": a("client", t),
-                "Condition": {"Bool": {"iot:Connection.Thing.IsAttached": "true"}},
-            },
-            {
-                "Sid": "PublishOwnTopics",
-                "Effect": "Allow",
-                "Action": "iot:Publish",
-                "Resource": [a("topic", f"{naming.TOPIC_ROOT}/{t}/{s}") for s in pub]
-                + [a("topic", f"{jobs}/start-next"), a("topic", f"{jobs}/*/update")],
-            },
-            {
-                "Sid": "SubscribeOwnTopics",
-                "Effect": "Allow",
-                "Action": "iot:Subscribe",
-                "Resource": [a("topicfilter", f"{naming.TOPIC_ROOT}/{t}/{s}") for s in sub]
-                + [a("topicfilter", f"{jobs}/{s}") for s in (
-                    "notify-next", "start-next/accepted", "start-next/rejected",
-                    "+/update/accepted", "+/update/rejected")],
-            },
-            {
-                "Sid": "ReceiveOwnTopics",
-                "Effect": "Allow",
-                "Action": "iot:Receive",
-                "Resource": [a("topic", f"{naming.TOPIC_ROOT}/{t}/{s}") for s in sub]
-                + [a("topic", f"{jobs}/{s}") for s in (
-                    "notify-next", "start-next/accepted", "start-next/rejected",
-                    "*/update/accepted", "*/update/rejected")],
-            },
+            {"Effect": "Allow", "Action": "iot:Connect", "Resource": a("client", t),
+             "Condition": {"Bool": {"iot:Connection.Thing.IsAttached": "true"}}},
+            {"Effect": "Allow", "Action": "iot:Publish",
+             "Resource": [a("topic", x) for x in pub] + [a("topic", f"{jobs}/start-next"), a("topic", f"{jobs}/*/update")]},
+            {"Effect": "Allow", "Action": "iot:Subscribe", "Resource": [a("topicfilter", x) for x in down + job_down]},
+            {"Effect": "Allow", "Action": "iot:Receive", "Resource": [a("topic", x) for x in down + job_down]},
         ],
     }
 

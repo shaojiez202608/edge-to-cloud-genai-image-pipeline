@@ -77,3 +77,11 @@ def test_thing_names():
         except ValueError:
             continue
         raise AssertionError(bad)
+
+
+def test_device_policy_fits_the_iot_policy_size_limit():
+    # Longest commercial region name and a 12-digit account: still below the 2048-character limit.
+    doc = policy.device_policy("aws", "ap-southeast-5", "111122223333")
+    assert len(json.dumps(doc, separators=(",", ":"))) < 2048
+    claim = policy.claim_policy("aws", "ap-southeast-5", "111122223333", "a" * 16, "a" * 16 + "-sim-fleet")
+    assert len(json.dumps(claim, separators=(",", ":"))) < 2048
