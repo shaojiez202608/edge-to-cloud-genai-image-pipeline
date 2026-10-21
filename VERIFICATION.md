@@ -91,9 +91,25 @@ runs of the same day (`e2e-20261021T042446-eb05`, `e2e-20261021T050056-2511`).
 
 ### D5 load test and reconnect storm (`scripts/loadtest_aws.py`)
 
-See the section filled after the run below.
+Runs `lt-jitter-20261021T055702-1462` and `lt-immediate-20261021T062108-ee1b`, commit 59a9927. The scale was
+derived at run time from the account's IoT Core and Fargate quotas (25 % of each account-level rate,
+capped by `max_fleet_size`): **1000 simulated devices in 10 ARM64 Fargate tasks** per run, each device
+provisioned by claim with its own certificate, then ramp, steady heartbeats, a simultaneous outage of all
+devices, reconnect, heartbeats, disconnect.
 
-LOADTEST_PLACEHOLDER
+| | Full-jitter backoff | Immediate reconnect |
+|---|---|---|
+| Devices provisioned / tasks reporting | 1000 / 10 (all exit 0) | 1000 / 10 (all exit 0) |
+| Connect success rate | 100 % | 100 % |
+| Reconnect success rate after the storm | 100 % | 100 % |
+| Heartbeats generated / acknowledged / received through the rule (unique) | 8000 / 8000 / 8000 | 8000 / 8000 / 8000 |
+| End-to-end message loss | 0 % | 0 % |
+| Provisioning retries | 1 claim connection refused with `connect_quota_exceeded`, succeeded on retry | none |
+
+Reconnect time: in this run the immediate strategy took longer to bring the fleet back than full jitter,
+and neither strategy saw throttled connects — at this share of the account quotas the herd effect seen in
+the local simulation (offline demo, D5) did not appear. Absolute timings are in `out/loadtest_aws.json`
+and are intentionally not reproduced here.
 
 ## Found in testing (fixed)
 
