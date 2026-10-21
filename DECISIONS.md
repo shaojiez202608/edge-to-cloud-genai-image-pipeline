@@ -68,3 +68,12 @@ more conservative and safer one was chosen.
   ran on GitHub; Conventional Commits; tag `v0.1.0`; no push.
 - **D14 Removal policy is a parameter.** The sandbox profile destroys data with the stack; the
   handover profile retains buckets and tables and uses `Teardown=manual-review` (see handover.md).
+- **D15 Security exception to the dependency cooldown.** osv-scanner reported High/Critical advisories
+  for Pillow 12.3.0; Pillow parses untrusted images, so 13.0.0 is taken although it is younger than the
+  7-day cooldown (`exclude-newer-package` in pyproject.toml and the bundle build). Remove the exception
+  once the release is older than the cooldown.
+- **D16 Existing VPC as a deploy-time option.** Found in testing: the sandbox account had no VPC or
+  internet-gateway capacity left. `USE_DEFAULT_VPC=1` places the tasks in the default VPC's public
+  subnets (looked up read-only, passed as context, never written to the parameter file); the VPC is not
+  modified, only this stack's security group is created in it. The stack still creates its own VPC by
+  default.

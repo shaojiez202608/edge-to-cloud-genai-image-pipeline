@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 mkdir -p build
 STAGE=$(mktemp -d build/stage.XXXXXX)
 uv pip install --python-platform aarch64-manylinux_2_28 --python-version 3.14 --target "$STAGE/lambda" \
-  --only-binary=:all: --exclude-newer "7 days" --quiet -r src/functions/requirements.txt
+  --only-binary=:all: --exclude-newer "7 days" --exclude-newer-package "pillow=2026-10-18T00:00:00Z" --quiet -r src/functions/requirements.txt
 cp -R src/edge_pipeline "$STAGE/lambda/edge_pipeline"
 cp src/functions/handlers.py "$STAGE/lambda/handlers.py"
 mkdir -p "$STAGE/image-src/src"

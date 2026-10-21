@@ -1,5 +1,5 @@
 # Lambda bundle (arm64, Python 3.14). Pinned to the versions in uv.lock; boto3 is bundled because the
 # pipeline uses S3 conditional writes (IfMatch / IfNoneMatch), which older runtime SDKs lack.
 boto3==1.43.113
-pillow==12.3.0
+pillow==13.0.0
 jsonschema==4.26.0

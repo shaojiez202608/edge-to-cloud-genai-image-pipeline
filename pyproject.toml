@@ -11,7 +11,7 @@ dependencies = []
 # Lambda runtime dependencies are also listed in src/functions/requirements.txt (arm64 bundle).
 runtime = [
   "boto3>=1.40",
-  "pillow>=11",
+  "pillow>=13",
   "jsonschema>=4.23",
 ]
 # Device simulator (also installed in the arm64 simulator image, containers/simulator/requirements.txt).
@@ -31,6 +31,9 @@ infra = [
 [tool.uv]
 # Supply-chain cooldown: do not resolve package versions published in the last 7 days.
 exclude-newer = "7 days"
+# Security exception to the cooldown (DECISIONS D15): Pillow parses untrusted images and 13.0.0 fixes
+# High/Critical advisories reported by osv-scanner for 12.3.0. Remove once 13.0.0 is older than 7 days.
+exclude-newer-package = { pillow = "2026-10-18T00:00:00Z" }
 package = false
 default-groups = ["runtime", "sim", "dev", "infra"]
 
