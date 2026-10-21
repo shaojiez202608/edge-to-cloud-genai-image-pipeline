@@ -1,0 +1,14 @@
+# Changes to CI, scanning configuration, infrastructure, cleanup and AI-assistant configuration need
+# the maintainer's review.
+/.github/                  @shaojiez202608
+/.gitleaks.toml            @shaojiez202608
+/Makefile                  @shaojiez202608
+/AGENTS.md                 @shaojiez202608
+/CLAUDE.md                 @shaojiez202608
+/infra/                    @shaojiez202608
+/containers/               @shaojiez202608
+/scripts/cleanup.sh        @shaojiez202608
+/scripts/cleanup_iot.py    @shaojiez202608
+/scripts/secret_canary.sh  @shaojiez202608
+/src/edge_pipeline/policy.py      @shaojiez202608
+/src/edge_pipeline/validation.py  @shaojiez202608

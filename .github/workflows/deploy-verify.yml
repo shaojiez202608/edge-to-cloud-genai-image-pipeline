@@ -1,0 +1,55 @@
+# Manual deployment check in a sandbox account: deploy, end-to-end, drills, load test, destroy,
+# residual check. Runs only on demand, behind the "sandbox" environment (configure required reviewers
+# on it), with short-lived OIDC credentials. Incurs AWS charges (Bedrock, Fargate, CodeBuild, IoT).
+name: deploy-verify
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-verify-sandbox
+  cancel-in-progress: false
+
+jobs:
+  deploy-verify-destroy:
+    name: Deploy, verify, destroy, residual check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    environment: sandbox
+    permissions:
+      contents: read   # checkout
+      id-token: write  # OIDC token for aws-actions/configure-aws-credentials (no stored keys)
+    env:
+      AWS_REGION: us-east-1
+      ALLOW_PAID: "1"
+      CONFIRM_ACCOUNT: ${{ vars.SANDBOX_ACCOUNT_LAST4 }}
+      CONFIRM_STACK: proto-edge-pipeline
+      CONFIRM_DATA: "yes"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::111122223333:role/<DEPLOY_VERIFY_ROLE_NAME>
+          aws-region: us-east-1
+      - run: make init
+      - run: make deploy
+      - run: make verify
+      - run: make verify-rollout
+      - run: make verify-loadtest
+      - name: Destroy (always)
+        if: always()
+        run: make destroy
+      - name: Residual check (fails on leftovers)
+        if: always()
+        run: make verify-cleanup

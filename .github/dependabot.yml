@@ -1,0 +1,38 @@
+# Weekly, grouped, never auto-merged. A cooldown gives new releases a week before a PR is opened.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      cdk:
+        patterns: ["aws-cdk-lib", "constructs", "cdk-nag"]
+      aws-sdk:
+        patterns: ["boto3", "botocore", "awsiotsdk", "awscrt"]
+      media:
+        # Pillow parses untrusted images: review these updates on their own.
+        patterns: ["pillow"]
+      dev:
+        patterns: ["pytest", "ruff", "jsonschema"]
+    ignore:
+      # The local toolchain stays on Python 3.13 while the Lambda bundle targets 3.14 (DECISIONS D11);
+      # src/functions/requirements.txt and containers/simulator/requirements.txt are pinned to uv.lock by hand.
+      - dependency-name: "python"
+  - package-ecosystem: docker
+    directory: /containers/simulator
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

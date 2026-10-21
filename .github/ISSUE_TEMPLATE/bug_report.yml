@@ -1,0 +1,42 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach real images, device identifiers, certificates, personal data, account ids or credentials.
+        Reproduce with the synthetic generator (`make eval-data`) or local mode (`make demo`). Security issues: see SECURITY.md.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Commands (for example `make test`, `make demo`, `make verify`) and parameter changes.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.1.0 or a commit hash
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Where
+      options: [local simulation mode, deployed sandbox (simulators), deployed sandbox (Greengrass cores)]
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output (masked)
+      description: Replace 12-digit numbers with 111122223333.
+      render: text
