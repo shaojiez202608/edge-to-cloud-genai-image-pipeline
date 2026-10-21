@@ -42,12 +42,19 @@ async def _beats(boxes: list[EdgeBox], count: int, interval_s: float) -> None:
 
 async def run_load(boxes: list[EdgeBox], *, connect_rate_per_s: float, heartbeats_before: int = 3,
                    heartbeats_after: int = 3, heartbeat_interval_s: float = 1.0, outage_s: float = 2.0,
-                   reconnect_deadline_s: float = 120.0, storm: bool = True) -> dict:
+                   reconnect_deadline_s: float = 120.0, storm: bool = True, start_at: float | None = None,
+                   storm_at: float | None = None) -> dict:
+    """``start_at`` / ``storm_at`` (epoch seconds) align the ramp and the storm across several
+    simulator processes (Fargate tasks) that finished provisioning at different times."""
+    if start_at and start_at > time.time():
+        await asyncio.sleep(start_at - time.time())
     t0 = time.time()
     initial = await _ramp(boxes, connect_rate_per_s, reconnect_deadline_s)
     t_ramp = time.time()
     await _beats([b for b in boxes if b.online], heartbeats_before, heartbeat_interval_s)
     reconnect: list[float | None] = []
+    if storm and storm_at and storm_at > time.time():
+        await asyncio.sleep(storm_at - time.time())
     t_storm = time.time()
     if storm:
         async def offline_beats() -> None:
@@ -85,6 +92,7 @@ async def run_load(boxes: list[EdgeBox], *, connect_rate_per_s: float, heartbeat
         "reconnected": len(ok),
         "reconnect_success_rate": round(len(ok) / len(reconnect), 4) if reconnect else None,
         "reconnect_s": {"p50": percentile(ok, 50), "p95": percentile(ok, 95), "max": percentile(ok, 100)},
+        "reconnect_samples": [round(x, 3) for x in ok],
         "connect_attempts": sum(b.stats.connect_attempts for b in boxes),
         "connect_failures": dict(failures),
         "heartbeats_generated": sum(b.stats.heartbeats_generated for b in boxes),

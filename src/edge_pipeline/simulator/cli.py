@@ -103,7 +103,8 @@ async def scenario_loadtest() -> dict:
         boxes, connect_rate_per_s=float(env("CONNECT_RATE", "10")),
         heartbeats_before=int(env("HEARTBEATS", "3")), heartbeats_after=int(env("HEARTBEATS", "3")),
         heartbeat_interval_s=float(env("HEARTBEAT_INTERVAL_S", "2")), outage_s=float(env("OUTAGE_S", "5")),
-        reconnect_deadline_s=float(env("RECONNECT_DEADLINE_S", "180")))
+        reconnect_deadline_s=float(env("RECONNECT_DEADLINE_S", "180")),
+        start_at=float(env("START_AT", "0")) or None, storm_at=float(env("STORM_AT", "0")) or None)
     report.update(requested_devices=n, provisioned=len(boxes), provisioning_failures=dict(prov_fail),
                   provisioning_s=round(t_prov, 2), task_index=idx)
     return report
@@ -141,9 +142,16 @@ async def scenario_jobs_agent() -> dict:
     await asyncio.gather(*(b.connect() for b in boxes))
     await asyncio.gather(*(b.start_jobs_agent() for b in boxes))
     deadline = time.time() + float(env("DURATION_S", "600"))
-    while time.time() < deadline:
+    stop = asyncio.Event()
+    import signal
+
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop.set)  # ECS stop_task sends SIGTERM
+    while time.time() < deadline and not stop.is_set():
         await asyncio.gather(*(b.heartbeat() for b in boxes if b.online))
-        await asyncio.sleep(10)
+        try:
+            await asyncio.wait_for(stop.wait(), 10)
+        except TimeoutError:
+            pass
     await asyncio.gather(*(b.disconnect() for b in boxes))
     return {"devices": len(boxes), "provisioning_failures": dict(prov_fail),
             "versions": dict(Counter(b.version for b in boxes)),

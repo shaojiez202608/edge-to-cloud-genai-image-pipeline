@@ -112,6 +112,7 @@ async def d5(n: int, strategy: str) -> dict:
     rep["loss"] = loss(rep, env.telemetry.drain(), run_id)
     rep["simulated_connect_limit_per_s"] = env.broker.max_connects_per_second
     rep.pop("generated_keys")
+    rep.pop("reconnect_samples")
     return rep
 
 
