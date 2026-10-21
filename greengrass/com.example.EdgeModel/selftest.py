@@ -15,7 +15,8 @@ def main(path: str) -> int:
     with open(path, encoding="utf-8") as f:
         model = json.load(f)
     threshold = model.get("threshold")
-    if not isinstance(threshold, int | float):
+    # Tuple form on purpose: the Greengrass image ships an older Python 3 (found in testing).
+    if not isinstance(threshold, (int, float)):  # noqa: UP038
         print("selftest: model file malformed")
         return 2
     wrong = sum(1 for score, label in REFERENCE if (score >= threshold) != label)
