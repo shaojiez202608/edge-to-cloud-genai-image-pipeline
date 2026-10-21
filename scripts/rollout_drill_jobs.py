@@ -103,12 +103,14 @@ def main() -> None:
         "bad release canceled by the abort criteria": bad["final_status"] == "CANCELED",
         "no device succeeded with the bad release": bad["executions"].get("SUCCEEDED", 0) == 0,
         "devices that failed rolled back (report FAILED, keep running)": bad["executions"].get("FAILED", 0) >= 1,
-        "part of the fleet never received the bad release": bad["executions"].get("CANCELED", 0) > 0,
+        # Executions are created only for devices the rollout reached; the rest never saw the release.
+        "part of the fleet never received the bad release": sum(bad["executions"].values()) < len(things),
         "good release completed on every device": good["final_status"] == "COMPLETED"
         and good["executions"].get("SUCCEEDED", 0) == len(things),
     }
     for k, v in checks.items():
         print(f"  {'PASS' if v else 'FAIL'}  {k}")
+    bad["devices_never_notified"] = len(things) - sum(bad["executions"].values())
     write_report(args.report, {"run_id": rid, "region": ctx.region, "devices": len(things), "online": online,
                                "rollout": ROLLOUT, "abort": ABORT, "bad": bad, "good": good, "checks": checks,
                                "task_status": list(status.values()), "task_reports": reps})

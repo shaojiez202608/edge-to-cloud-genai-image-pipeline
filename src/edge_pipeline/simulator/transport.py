@@ -117,7 +117,7 @@ class AwsIotTransport:
             code = "connect_failed"
             try:
                 rc = data.connack_packet.reason_code if data.connack_packet else None
-                code = rc.name.lower() if rc is not None else type(data.exception).__name__
+                code = rc.name.lower() if rc is not None else getattr(data.exception, "name", type(data.exception).__name__)
             except Exception:  # noqa: BLE001 - keep the generic code
                 code = "connect_failed"
             fut = self._connected

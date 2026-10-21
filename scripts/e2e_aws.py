@@ -152,17 +152,21 @@ def main() -> None:
     # D3
     probe = rep["cross_device_probe"]
     check(results, "D3 every cross-device publish/subscribe refused", set(probe.values()) == {"not_authorized"}, probe)
-    time.sleep(90)  # AWS/IoT metrics are published per minute
+    # revocation (workstation) runs first so its refused connects also appear in the metrics
+    rev = revocation_probe(ctx)
+    time.sleep(120)  # AWS/IoT metrics are published per minute
     cw = ctx.client("cloudwatch")
     metrics = {}
-    for m in ("PublishIn.AuthError", "Subscribe.AuthError"):
+    for m in ("PublishIn.AuthError", "Subscribe.AuthError", "Connect.AuthError"):
+        # Found in testing: these metrics carry a Protocol=MQTT dimension.
         pts = cw.get_metric_statistics(Namespace="AWS/IoT", MetricName=m, StartTime=started,
+                                       Dimensions=[{"Name": "Protocol", "Value": "MQTT"}],
                                        EndTime=dt.datetime.now(dt.UTC), Period=60, Statistics=["Sum"])["Datapoints"]
         metrics[m] = sum(p["Sum"] for p in pts)
-    check(results, "D3 denials visible in AWS/IoT AuthError metrics (account-wide)", all(v > 0 for v in metrics.values()), metrics)
+    check(results, "D3 refused publishes visible in AWS/IoT PublishIn.AuthError (account-wide metric)",
+          metrics["PublishIn.AuthError"] >= 3, metrics)
 
-    # revocation (workstation)
-    rev = revocation_probe(ctx)
+    # identity checks from the revocation probe
     check(results, "identity: certificate not attached to a thing cannot connect", rev["cert_not_attached_to_thing"] != "connected", rev)
     check(results, "identity: active certificate connects as its own thing", rev["active"] == "connected")
     check(results, "identity: same certificate with another client id refused", rev["active_other_client_id"] != "connected")

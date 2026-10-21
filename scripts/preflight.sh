@@ -65,7 +65,10 @@ aws cloudformation describe-stacks --stack-name CDKToolkit --region "$REGION" >/
 
 echo "== quotas (Service Quotas, applied values; the load test sizes itself from these)"
 for code in L-AEA1E176 L-033DE216 L-4B33E451 L-75CAB723 L-CAFFCA46 L-B2BBBD8C; do
-  aws service-quotas get-service-quota --service-code iotcore --quota-code "$code" --region "$REGION" \
-    --query 'Quota.[QuotaName,Value]' --output text 2>/dev/null | sed 's/^/  info  /' || info "quota $code not readable"
+  { aws service-quotas get-service-quota --service-code iotcore --quota-code "$code" --region "$REGION" \
+      --query 'Quota.[QuotaName,Value]' --output text 2>/dev/null \
+    || aws service-quotas get-aws-default-service-quota --service-code iotcore --quota-code "$code" --region "$REGION" \
+      --query 'Quota.[QuotaName,Value]' --output text 2>/dev/null | sed 's/$/ (AWS default)/'; } | sed 's/^/  info  /' \
+    || info "quota $code not readable"
 done
 exit $fail
