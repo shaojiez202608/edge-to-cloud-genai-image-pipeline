@@ -1,0 +1,11 @@
+{
+  "app": ".venv/bin/python infra/app.py",
+  "output": "cdk.out",
+  "context": {
+    "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/core:enablePartitionLiterals": true,
+    "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": true,
+    "@aws-cdk/customresources:installLatestAwsSdkDefault": false
+  }
+}

@@ -1,0 +1,6 @@
+# The CodeBuild context is the staged build/image-src directory; this file guards accidental builds
+# from the repository root.
+**
+!containers/
+!src/edge_pipeline/
+!greengrass/

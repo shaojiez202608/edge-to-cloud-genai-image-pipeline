@@ -1,0 +1,39 @@
+{
+  "_comment": "Sandbox profile (destroyable). Copied to config/sandbox.json by `make init`. Numeric limits here are prototype settings, not AWS quotas; budget.monthly_limit_usd is a sandbox-only deployable value.",
+  "deploy": {
+    "stack_name": "proto-edge-pipeline",
+    "resource_prefix": "proto-edge",
+    "region": "us-east-1",
+    "availability_zones": ["us-east-1a", "us-east-1b"],
+    "removal_policy": "destroy",
+    "log_retention_days": 7,
+    "data_retention_days": {"uploads": 3, "work": 1, "results": 30, "shelf": 30, "loadtest": 7},
+    "max_fleet_size": 1000,
+    "dispatch_max_concurrency": 5,
+    "lambda_memory_mb": 1024,
+    "analyze_timeout_s": 120,
+    "telemetry_retention_s": 7200,
+    "greengrass_core_count": 3,
+    "bedrock_invocations_alarm_per_5min": 300,
+    "model_regions": ["us-east-1", "us-east-2", "us-west-2"],
+    "simulator_task": {"cpu": 1024, "memory_mb": 2048},
+    "greengrass_task": {"cpu": 1024, "memory_mb": 2048},
+    "greengrass": {
+      "nucleus_version": "2.17.0",
+      "nucleus_sha256": "7bfc1774d30b791b74fd67b143ed4eb4f04fa2f624f422b5899aeca84cfde1af",
+      "docker_repo_commit": "c84c544ddbf854cbdd1798b1a4ace6af510a1bec"
+    },
+    "budget": {"enabled": true, "monthly_limit_usd": 10},
+    "alarm_email": null,
+    "tags": {"Project": "edge-genai-pipeline", "Purpose": "prototype", "Teardown": "after-test"}
+  },
+  "pipeline": {
+    "model_mode": "bedrock",
+    "model_id": "us.amazon.nova-2-lite-v1:0",
+    "max_tokens": 1024,
+    "temperature": 0.0,
+    "copy_locale": "en-US",
+    "guardrail_enabled": true,
+    "uploads_per_device_per_hour": 60
+  }
+}
