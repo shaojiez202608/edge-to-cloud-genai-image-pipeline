@@ -1,0 +1,34 @@
+Third-party components
+
+This project does not relicense any third-party component. Each component remains under its own
+licence. Licences below were read from the installed package metadata (uv.lock versions) or from the
+component's own repository/archive on 2026-10-21.
+
+1. Distributed with this repository
+
+   None. The repository contains only original code, configuration and documentation. Synthetic
+   images are generated at run time and are not committed.
+
+2. Downloaded at build or deploy time (not distributed with this repository)
+
+   Component                                  Licence          Used by
+   -----------------------------------------  ---------------  --------------------------------------------
+   boto3, botocore, s3transfer                Apache-2.0       Lambda bundle, simulator image, scripts
+   Pillow                                     MIT-CMU          Lambda bundle (image checks), simulator image
+   jsonschema                                 MIT              Lambda bundle (output validation)
+   awsiotsdk (AWS IoT Device SDK v2), awscrt  Apache-2.0       simulator image, scripts
+   aws-cdk-lib, constructs, cdk-nag           Apache-2.0       infrastructure (synth only)
+   AWS CDK CLI (npm aws-cdk)                  Apache-2.0       deploy tooling
+   pytest, ruff                               MIT              development only
+   aws-greengrass-docker (Dockerfile, entrypoint; pinned commit)
+                                              MIT-0            Greengrass image build (CodeBuild)
+   AWS IoT Greengrass nucleus zip (pinned version, SHA-256 checked)
+                                              Apache-2.0 (LICENSE in the archive; the archive also ships
+                                              NOTICE and THIRD-PARTY-LICENSES files)
+                                                               Greengrass image build (CodeBuild)
+   Base images: python:3.13-slim-bookworm (ECR Public mirror of the Docker official image) and
+   amazonlinux:2023 (ECR Public)                Each image's own licences apply   container builds
+   Amazon Root CA 1 certificate                 Amazon Trust Services             downloaded by the Greengrass entrypoint
+
+Review these licences, and the licences of all transitive dependencies, with your legal team before
+distributing images built from this repository.
