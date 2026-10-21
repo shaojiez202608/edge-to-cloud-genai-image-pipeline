@@ -126,14 +126,34 @@ def main() -> None:
     ensure_components(ctx)
     envs = [{"THING_NAME": c, "GG_SECRET_ID": f"{ctx.prefix}/gg/{c}", "IOT_DATA_ENDPOINT": ctx.iot_endpoint,
              "IOT_CRED_ENDPOINT": ctx.cred_endpoint()} for c in cores]
-    arns = ctx.run_tasks("greengrass", envs, started_by=rid)
-    report: dict = {"run_id": rid, "region": ctx.region, "cores": cores, "rollout": ROLLOUT, "abort": ABORT}
-    deadline = time.time() + 900
+    arns = dict(zip(cores, ctx.run_tasks("greengrass", envs, started_by=rid), strict=False))
+    started_at = time.time()
+    report: dict = {"run_id": rid, "region": ctx.region, "cores": cores, "rollout": ROLLOUT, "abort": ABORT,
+                    "task_restarts": 0}
+    gg, ecs = ctx.client("greengrassv2"), ctx.client("ecs")
+    deadline = time.time() + 1200
+    st: dict = {}
     while time.time() < deadline:
-        st = {c: core_state(ctx, c)["status"] for c in cores}
+        # A core counts only when it reported HEALTHY after this run's tasks started (the registry keeps the
+        # status of earlier runs). A task that stopped (e.g. image pull timeout, found in testing) is restarted.
+        for i, c in enumerate(cores):
+            t = ecs.describe_tasks(cluster=ctx.out["Cluster"], tasks=[arns[c]])["tasks"] if c in arns else []
+            if not t or t[0]["lastStatus"] == "STOPPED":
+                if report["task_restarts"] < 4:
+                    report["task_restarts"] += 1
+                    arns[c] = ctx.run_tasks("greengrass", [envs[i]], started_by=rid)[0]
+        st = {}
+        for c in cores:
+            try:
+                d = gg.get_core_device(coreDeviceThingName=c)
+                fresh = d["lastStatusUpdateTimestamp"].timestamp() > started_at
+                st[c] = d["status"] if fresh else "STALE"
+            except gg.exceptions.ResourceNotFoundException:
+                st[c] = "NOT_REGISTERED"
         if all(v == "HEALTHY" for v in st.values()):
             break
         time.sleep(20)
+    arns = list(arns.values())
     report["cores_started"] = st
     print(f"core status: {st}")
     if not all(v == "HEALTHY" for v in st.values()):
