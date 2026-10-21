@@ -129,6 +129,17 @@ and are intentionally not reproduced here.
 | T9 | Under load, a claim connection socket timeout ended the whole simulator task | Treated as a provisioning failure and retried (`59a9927`) |
 | T10 | Cleanup: at most 10 IoT jobs can be deleting at once; Greengrass DeleteDeployment is throttled by the same quota; thousands of certificates are slow to remove one by one | Retries with backoff and bounded concurrency (`e3c46d1`); see DEPLOYMENT-LOG |
 
+## Hardening after the deployment verification (not redeployed)
+
+After the first GitHub CI run (ASH), the findings in SECURITY-NOTES ("Scanner findings and exceptions")
+were addressed. Changes that affect deployed content — the Greengrass container config directory
+(`containers/greengrass/entrypoint.sh`, `infra/edge_infra/compute.py`), HEALTHCHECKs and the base tag in
+both Dockerfiles, the `sha256:`/`git:` prefixes of the pinned values (`infra/edge_infra/compute.py`,
+`containers/buildspec.yml`) — are **hardening changes made after the deployment verification and were not
+redeployed**; the cloud results above were measured on 59a9927. Local checks after the changes: pytest,
+ruff, `make synth` (cdk-nag), bandit (0 issues), detect-secrets on tracked files (0), checkov on both
+Dockerfiles (0 failed, 2 documented skips).
+
 ## Cleanup
 
 `make destroy` followed by `make verify-cleanup`: first residual check listed 2 IoT jobs and 4 Greengrass

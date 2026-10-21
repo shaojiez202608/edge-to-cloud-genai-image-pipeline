@@ -82,3 +82,17 @@ Not acknowledged but noted: SNS topic without SSE (cdk-nag does not flag it here
   cleanup script; the drills record provisioning failures so this can be checked (VERIFICATION).
 - **R7 Account-wide signals**: AWS/IoT metrics and the cost budget are account-wide.
 - **R8 Artifacts are not signed**; Greengrass verifies the recipe digest it computed at component creation.
+
+## Scanner findings and exceptions (ASH, first GitHub CI run)
+
+| Scanner / rule | Location | Handling |
+|---|---|---|
+| detect-secrets | `DEPLOYMENT-LOG.md` (resource list) | Rephrased: the line named Secrets Manager entries, not values |
+| detect-secrets (hex high entropy) | `config/*.example.json` `nucleus_sha256`, `docker_repo_commit` | Public pins, not secrets; values are now written as `sha256:<hex>` / `git:<hex>` (validated in `infra/edge_infra/params.py`, prefix stripped before CodeBuild), so they are no longer bare hex strings |
+| bandit B108 | `infra/edge_infra/compute.py` (container `INIT_CONFIG`) | Fixed: the config directory moved from `/tmp/config` to `/opt/edge-config` (created 0700 in the image) |
+| bandit B608 | `src/edge_pipeline/rules.py` (`Rule.sql`) | IoT rule SQL built only from the fixed rule definitions; every fragment (topic filter, client prefix, aliases, field names) is now whitelisted by regex and an invalid fragment raises (`tests/test_rules.py`); line-level `# nosec B608` with that reason |
+| bandit B310 | `src/edge_pipeline/simulator/transport.py` (`urlopen`) | Only `https://` URLs reach the call (checked before; other schemes return 400); line-level `# nosec B310` with that reason |
+| bandit B311 (low) | `local/broker.py`, `simulator/device.py`, `synthetic.py` | Pseudo-random numbers for fault injection, jitter and deterministic fixtures, never for security; line-level `# nosec B311` |
+| checkov CKV_DOCKER_2 | both Dockerfiles | Fixed: `HEALTHCHECK` added (simulator: package import; Greengrass: nucleus JVM process) |
+| checkov CKV_DOCKER_7 | `containers/greengrass/Dockerfile` | Default base tag now carries the pinned nucleus version; skipped in the file because the base is a local image built in the same CodeBuild run from the pinned official Dockerfile commit, not a registry image |
+| checkov CKV_DOCKER_3 | `containers/greengrass/Dockerfile` | Skipped in the file: the official aws-greengrass-docker Dockerfile runs the nucleus as root (no `USER`, sudoers changed) so the nucleus can run components as the non-root `ggc_user`; the simulator image runs as a non-root user |
