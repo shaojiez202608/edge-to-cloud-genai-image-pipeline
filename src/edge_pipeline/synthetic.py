@@ -168,7 +168,7 @@ def _draw_shape(d: ImageDraw.ImageDraw, shape: str, colour: tuple[int, int, int]
 
 def render(case: Case, seed: int = 7) -> tuple[bytes, dict]:
     """PNG bytes and a description (font used, size) of one case."""
-    rnd = random.Random(f"{seed}-{case.case_id}")  # noqa: S311 - deterministic test fixtures
+    rnd = random.Random(f"{seed}-{case.case_id}")  # noqa: S311 - deterministic test fixtures  # nosec B311 - deterministic test fixtures, not security
     bg = (245, 245, 242)
     img = Image.new("RGB", (SIZE, SIZE), bg)
     d = ImageDraw.Draw(img)

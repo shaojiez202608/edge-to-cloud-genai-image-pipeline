@@ -64,7 +64,7 @@ class LocalBroker:
         self.metrics: Counter[str] = Counter()
         self.denials: list[dict] = []
         self.drop_rate = 0.0
-        self.rnd = random.Random(seed)  # noqa: S311 - fault-injection simulation
+        self.rnd = random.Random(seed)  # noqa: S311 - fault-injection simulation  # nosec B311 - fault-injection simulation, not security
         self._ids = itertools.count(1)
         self.max_connects_per_second: int | None = None
         self._connect_window: list[float] = []

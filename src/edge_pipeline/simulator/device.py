@@ -63,7 +63,7 @@ class EdgeBox:
     def __init__(self, thing: str, transport: Transport, *, run_id: str = "", seed: int = 0,
                  reconnect: ReconnectPolicy | None = None, version: str = "1.0.0"):
         self.thing, self.t, self.run_id = thing, transport, run_id
-        self.rnd = random.Random(seed)  # noqa: S311 - simulation jitter
+        self.rnd = random.Random(seed)  # noqa: S311 - simulation jitter  # nosec B311 - reconnect jitter in a simulator, not security
         self.reconnect = reconnect or ReconnectPolicy()
         self.stats = DeviceStats()
         self.online = False

@@ -41,3 +41,13 @@ def test_rule_names_are_valid():
     for r in rules.device_rules("proto-edge"):
         name = rules.deployed_rule_name("proto-edge", r)
         assert name.replace("_", "").isalnum()
+
+
+def test_sql_fragments_are_whitelisted():
+    import pytest
+
+    bad = rules.Rule("x", "edge/+/x' OR 1=1 --", ((rules.Expr("topic", 2), "thing_name"),), "sqs:ingest")
+    with pytest.raises(ValueError):
+        bad.sql()
+    with pytest.raises(ValueError):
+        rules.Rule("x", "edge/+/x", ((rules.Expr("topic", 2), "a b"),), "sqs:ingest").sql()

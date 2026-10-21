@@ -222,7 +222,7 @@ class AwsIotTransport:
         def post() -> int:
             req = urllib.request.Request(url, data=body, method="POST", headers={"Content-Type": ctype})  # noqa: S310
             try:
-                with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310 - https only, checked above
+                with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310  # nosec B310 - only https:// presigned S3 URLs reach here (checked above); file:// and other schemes are refused
                     return r.status
             except urllib.error.HTTPError as e:
                 return e.code

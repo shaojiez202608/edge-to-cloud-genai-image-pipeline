@@ -6,12 +6,16 @@ authenticated client id, so a payload can never name another device.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
 from . import naming
 
 SQL_VERSION = "2016-03-23"
+_TOPIC_FILTER_RE = re.compile(r"^[A-Za-z0-9$_+#/-]{1,256}$")
+_PREFIX_RE = re.compile(r"^[a-z][a-z0-9-]{1,30}$")
+_ALIAS_RE = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 
 
 @dataclass(frozen=True)
@@ -54,14 +58,21 @@ class Rule:
     prefix_expr: Expr = field(default_factory=lambda: Expr("topic", 2))
 
     def sql(self) -> str:
+        # Every fragment is whitelisted before it is placed in the statement (the SQL is IoT rule SQL built
+        # from the fixed definitions in this module, never from device or user input).
+        if not _TOPIC_FILTER_RE.match(self.topic_filter):
+            raise ValueError("topic filter outside the allowed character set")
+        if self.client_prefix is not None and not _PREFIX_RE.match(self.client_prefix):
+            raise ValueError("client prefix outside the allowed character set")
+        if not all(_ALIAS_RE.match(alias) for _, alias in self.select):
+            raise ValueError("alias outside the allowed character set")
         cols = ", ".join(f"{e.sql()} AS {alias}" for e, alias in self.select)
         where = []
         if self.device_scoped:
             where.append("topic(2) = clientid()")
         if self.client_prefix:
             where.append(f"startswith({self.prefix_expr.sql()}, '{self.client_prefix}-')")
-        # Not user input: built from the fixed rule definitions below (field names are checked).
-        sql = f"SELECT {cols} FROM '{self.topic_filter}'"  # noqa: S608
+        sql = f"SELECT {cols} FROM '{self.topic_filter}'"  # noqa: S608  # nosec B608 - IoT rule SQL from whitelisted fixed fragments (see checks above)
         return sql + (" WHERE " + " AND ".join(where) if where else "")
 
     def apply(self, topic: str, client_id: str, payload_bytes: bytes, now_ms: int) -> dict | None:
