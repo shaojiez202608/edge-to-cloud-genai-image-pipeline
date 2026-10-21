@@ -36,8 +36,8 @@ phases:
           sed -i "s#wget \$GREENGRASS_RELEASE_URI \&\& ##" /tmp/ggd/Dockerfile
           sed -i "s#^COPY \"greengrass-entrypoint.sh\" /#COPY \"greengrass-entrypoint.sh\" /\nCOPY greengrass-${NUCLEUS_VERSION}.zip /#" /tmp/ggd/Dockerfile
           grep -n "FROM\|COPY\|wget" /tmp/ggd/Dockerfile
-          docker build --platform linux/arm64 --build-arg GREENGRASS_RELEASE_VERSION="$NUCLEUS_VERSION" -t greengrass-base:local /tmp/ggd
-          docker build --platform linux/arm64 --build-arg BASE_IMAGE=greengrass-base:local \
+          docker build --platform linux/arm64 --build-arg GREENGRASS_RELEASE_VERSION="$NUCLEUS_VERSION" -t "greengrass-base:${NUCLEUS_VERSION}" /tmp/ggd
+          docker build --platform linux/arm64 --build-arg BASE_IMAGE="greengrass-base:${NUCLEUS_VERSION}" \
             --build-arg NUCLEUS_VERSION="$NUCLEUS_VERSION" -f containers/greengrass/Dockerfile -t "$GG_REPO:$IMAGE_TAG" .
           docker push "$GG_REPO:$IMAGE_TAG"
         fi
