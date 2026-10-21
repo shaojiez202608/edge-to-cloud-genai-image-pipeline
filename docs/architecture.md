@@ -86,7 +86,7 @@ staged source asset and tagged with the asset hash (immutable tags).
 
 - No real devices, cameras or e-commerce platform; the shelf is S3 objects and a manifest.
 - The device policy must stay below the AWS IoT policy size limit (found in testing).
-- Greengrass on Fargate is not a documented configuration; see VERIFICATION.md for what ran.
+- Greengrass on Fargate is not a documented configuration; it ran in testing (T4), which does not make it supported.
 - Load-test numbers describe one run in one account at one time; they are not capacity statements.
 - The injection keyword rules are English/Chinese and not exhaustive; one known gap is in the test set.
 - The Bedrock budget alarm is account-wide (no cost-allocation tags).
@@ -148,6 +148,13 @@ Verified against official documentation on **2026-10-21** unless marked "found i
 | F25 | `AWS::Budgets::Budget` with SNS subscribers | [Budget resource](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-budgets-budget.html) |
 | F26 | Confused-deputy conditions for CodeBuild, ECS task roles, VPC flow logs | [CodeBuild](https://docs.aws.amazon.com/codebuild/latest/userguide/cross-service-confused-deputy-prevention.html), [ECS task roles](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html), [Flow logs role](https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-iam-role.html) |
 | T1 | An AWS IoT policy document larger than 2048 characters is rejected at create time | Found in testing (first deployment, 2026-10-21) |
+| T2 | The Greengrass nucleus reaches its data plane (`greengrass-ats.iot.<region>`) on port 8443 | Found in testing (2026-10-21) |
+| T3 | The nucleus calls `s3:GetBucketLocation` before downloading an artifact from S3 | Found in testing (deployment error `S3_GET_BUCKET_LOCATION_ACCESS_DENIED`) |
+| T4 | The Greengrass nucleus built from the official Dockerfile ran on ECS Fargate ARM64 with manual provisioning and without privileged mode; deployments, `Startup` health check failure, BROKEN state and ROLLBACK worked | Found in testing (VERIFICATION.md) |
+| T5 | AWS/IoT `PublishIn.AuthError` and `Connect.AuthError` carry a `Protocol=MQTT` dimension; refused MQTT 5 subscriptions produced no `Subscribe.AuthError` datapoints | Found in testing |
+| T6 | Bedrock Guardrails with the image prompt-attack filter blocked most synthetic injection images while passing the benign ones | Found in testing (VERIFICATION.md, D6) |
+| T7 | IoT Jobs executions exist only for devices the rollout reached; after an abort the rest have no execution record | Found in testing |
+| T8 | `AttachThingPrincipal` is eventually consistent: an immediate connect can be refused | Found in testing |
 
 Statements that could not be verified were removed from the repository: no concrete quota, price,
 latency or throughput figures appear anywhere.
