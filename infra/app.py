@@ -38,6 +38,8 @@ EdgePipelineStack(
     app, deploy["stack_name"], deploy=deploy, pipeline=params["pipeline"], code_dir=str(code_dir),
     image_src_dir=str(image_src),
     operator_arns=params_check.operator_arns(app.node.try_get_context("operator_principal_arns")),
+    existing_network=params_check.existing_network(app.node.try_get_context("existing_vpc_id"),
+                                                   app.node.try_get_context("existing_subnet_ids")),
     env=cdk.Environment(account=os.environ.get("CDK_DEFAULT_ACCOUNT") or None, region=deploy["region"]),
     description="Prototype: edge-to-cloud generative image pipeline (simulated devices, AWS IoT Core, Amazon Bedrock)",
 )

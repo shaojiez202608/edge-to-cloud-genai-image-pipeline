@@ -14,11 +14,13 @@ from . import compute, data, functions, iot, nag, observe
 
 class EdgePipelineStack(Stack):
     def __init__(self, scope: Construct, cid: str, *, deploy: dict, pipeline: dict, code_dir: str,
-                 image_src_dir: str, operator_arns: list[str] | None = None, **kw) -> None:
+                 image_src_dir: str, operator_arns: list[str] | None = None,
+                 existing_network: tuple[str, list[str]] | None = None, **kw) -> None:
         super().__init__(scope, cid, **kw)
         self.deploy, self.prefix = deploy, deploy["resource_prefix"]
         self.pipeline_cfg = PipelineConfig.from_dict(pipeline)
         self.operator_arns = list(operator_arns or [])
+        self.existing_network = existing_network
         data.build(self)
         functions.build(self, code_dir)
         iot.build(self)
@@ -53,7 +55,7 @@ class EdgePipelineStack(Stack):
             "ProvisioningTemplate": self.template_name, "ClaimPolicy": self.claim_policy.policy_name,
             "DevicePolicy": self.device_policy_name, "SimThingGroup": self.sim_group, "GgThingGroup": self.gg_group,
             "RoleAlias": self.role_alias_name, "GgCores": ",".join(self.gg_cores) or "-",
-            "ClaimSecret": self.claim_secret.secret_name, "Dashboard": self.dashboard.dashboard_name,
+            "ClaimSecret": f"{self.prefix}/claim", "Dashboard": self.dashboard.dashboard_name,
             "AlarmTopic": self.alarm_topic.topic_arn,
             "Guardrail": self.guardrail.attr_guardrail_id if self.guardrail is not None else "-",
         }

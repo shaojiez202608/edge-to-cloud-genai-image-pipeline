@@ -25,6 +25,9 @@ uv run python scripts/cleanup_iot.py --params "$PARAMS" 2>&1 | mask || warn "IoT
 
 echo "== cdk destroy"
 CTX=(-c "params=$PARAMS")
+if [ -f .deploy/network.ctx ]; then  # same network context as the deploy, so destroy synthesises the same stack
+  while IFS= read -r line; do CTX+=(-c "$line"); done < .deploy/network.ctx
+fi
 [ -d build/lambda ] || ./scripts/build_bundle.sh >/dev/null
 npx -y aws-cdk@2 destroy "${CTX[@]}" --force 2>&1 | mask | grep -vE '^\s*$' | tail -15 || warn "cdk destroy failed"
 STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo GONE)

@@ -143,3 +143,18 @@ def operator_arns(raw: str | list | None) -> list[str]:
 
 def gg_core_names(prefix: str, count: int) -> list[str]:
     return [f"{prefix}-gg-{i:02d}" for i in range(1, count + 1)]
+
+
+VPC_RE = re.compile(r"^vpc-[0-9a-f]{8,17}$")
+SUBNET_RE = re.compile(r"^subnet-[0-9a-f]{8,17}$")
+
+
+def existing_network(vpc_id: str | None, subnet_ids: str | None) -> tuple[str, list[str]] | None:
+    """``-c existing_vpc_id=vpc-... -c existing_subnet_ids=subnet-a,subnet-b`` (two public subnets in the
+    configured AZs, same order). Ids are account-specific, so they are never stored in the parameter file."""
+    if not vpc_id and not subnet_ids:
+        return None
+    subnets = [x.strip() for x in str(subnet_ids or "").split(",") if x.strip()]
+    if not VPC_RE.match(str(vpc_id or "")) or len(subnets) != 2 or not all(SUBNET_RE.match(x) for x in subnets):
+        raise ParamsInvalid("existing_vpc_id needs a vpc id and existing_subnet_ids exactly two subnet ids")
+    return str(vpc_id), subnets

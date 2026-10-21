@@ -19,18 +19,29 @@ CODEBUILD_IMAGE = "aws/codebuild/amazonlinux-aarch64-standard:3.0"
 
 def build(stack, image_src_dir: str) -> None:
     d, prefix = stack.deploy, stack.prefix
-    flow = log_group(stack, "VpcFlowLogs", f"/{prefix}/vpc-flow", d)
-    stack.vpc = ec2.Vpc(
-        stack, "Vpc", vpc_name=f"{prefix}-vpc", ip_addresses=ec2.IpAddresses.cidr("10.42.0.0/24"),
-        availability_zones=d["availability_zones"], nat_gateways=0, restrict_default_security_group=True,
-        subnet_configuration=[ec2.SubnetConfiguration(name="public", subnet_type=ec2.SubnetType.PUBLIC,
-                                                      cidr_mask=26, map_public_ip_on_launch=False)],
-        flow_logs={"all": ec2.FlowLogOptions(destination=ec2.FlowLogDestination.to_cloud_watch_logs(flow))})
+    if stack.existing_network:
+        # Deploy-time option (context existing_vpc_id / existing_subnet_ids): place the tasks in an
+        # existing VPC's public subnets without changing that VPC; only this stack's security group is
+        # created in it. Used when the account cannot create another VPC (DEPLOYMENT-LOG).
+        vpc_id, subnet_ids = stack.existing_network
+        stack.vpc = ec2.Vpc.from_vpc_attributes(stack, "Vpc", vpc_id=vpc_id,
+                                                availability_zones=d["availability_zones"],
+                                                public_subnet_ids=subnet_ids)
+    else:
+        flow = log_group(stack, "VpcFlowLogs", f"/{prefix}/vpc-flow", d)
+        stack.vpc = ec2.Vpc(
+            stack, "Vpc", vpc_name=f"{prefix}-vpc", ip_addresses=ec2.IpAddresses.cidr("10.42.0.0/24"),
+            availability_zones=d["availability_zones"], nat_gateways=0, restrict_default_security_group=True,
+            subnet_configuration=[ec2.SubnetConfiguration(name="public", subnet_type=ec2.SubnetType.PUBLIC,
+                                                          cidr_mask=26, map_public_ip_on_launch=False)],
+            flow_logs={"all": ec2.FlowLogOptions(destination=ec2.FlowLogDestination.to_cloud_watch_logs(flow))})
     stack.sg = ec2.SecurityGroup(stack, "SimulatorSg", vpc=stack.vpc, allow_all_outbound=False,
                                  security_group_name=f"{prefix}-simulators",
                                  description="Simulator and Greengrass tasks: no inbound; outbound TLS and MQTT only")
     stack.sg.add_egress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(443), "HTTPS to AWS endpoints")
     stack.sg.add_egress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(8883), "MQTT over TLS to AWS IoT Core")
+    # Found in testing: the Greengrass nucleus reaches its data plane (greengrass-ats.iot.<region>) on 8443.
+    stack.sg.add_egress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(8443), "Greengrass data plane (TLS)")
     stack.cluster = ecs.Cluster(stack, "Cluster", cluster_name=f"{prefix}-sim", vpc=stack.vpc,
                                 container_insights_v2=ecs.ContainerInsights.ENABLED)
 
@@ -82,7 +93,7 @@ def build(stack, image_src_dir: str) -> None:
     common_env = {"PREFIX": prefix, "AWS_REGION": Aws.REGION, "AWS_DEFAULT_REGION": Aws.REGION}
     specs = {
         "simulator": (d["simulator_task"], sim_role, {
-            **common_env, "PROVISIONING_TEMPLATE": stack.template_name, "CLAIM_SECRET_ID": stack.claim_secret.secret_name,
+            **common_env, "PROVISIONING_TEMPLATE": stack.template_name, "CLAIM_SECRET_ID": f"{prefix}/claim",
             "REPORT_BUCKET": stack.bucket.bucket_name}),
         "greengrass": (d["greengrass_task"], gg_role, {
             **common_env, "ROLE_ALIAS": stack.role_alias_name, "GGC_ROOT_PATH": "/greengrass/v2",

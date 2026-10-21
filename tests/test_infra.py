@@ -16,7 +16,7 @@ def params(profile):
     return json.loads((ROOT / "config" / f"{profile}.example.json").read_text())
 
 
-def synth(tmp, p, operators=None):
+def synth(tmp, p, operators=None, network=None):
     code = tmp / "code"
     code.mkdir(exist_ok=True)
     (code / "handlers.py").write_text("def upload_url(e, c):\n    return None\n")
@@ -28,7 +28,7 @@ def synth(tmp, p, operators=None):
                                            "@aws-cdk/aws-iam:minimizePolicies": True})
     d = p["deploy"]
     stack = EdgePipelineStack(app, d["stack_name"], deploy=d, pipeline=p["pipeline"], code_dir=str(code),
-                              image_src_dir=str(img), operator_arns=operators,
+                              image_src_dir=str(img), operator_arns=operators, existing_network=network,
                               env=cdk.Environment(region=d["region"]))
     for k, v in d["tags"].items():
         cdk.Tags.of(app).add(k, v)
@@ -129,7 +129,7 @@ def test_no_open_ingress(sandbox):
     for sg in t.find_resources("AWS::EC2::SecurityGroup").values():
         assert not sg["Properties"].get("SecurityGroupIngress")
         for e in sg["Properties"].get("SecurityGroupEgress", []):
-            assert e.get("FromPort") in (443, 8883, None) or e.get("CidrIp") == "255.255.255.255/32"
+            assert e.get("FromPort") in (443, 8443, 8883, None) or e.get("CidrIp") == "255.255.255.255/32"
 
 
 def test_removal_policy_parameter(sandbox, handover):
@@ -174,3 +174,15 @@ def test_template_has_no_account_id(sandbox):
     import re
     blob = json.dumps(t.to_json())
     assert not [m for m in re.findall(r"(?<!\d)\d{12}(?!\d)", blob) if m != "111122223333"]
+
+
+def test_existing_vpc_option_creates_no_vpc(tmp_path):
+    from edge_infra import params as pm
+
+    net = pm.existing_network("vpc-0123456789abcdef0", "subnet-0123456789abcdef0,subnet-0123456789abcdef1")
+    _, t, nag = synth(tmp_path, params("sandbox"), network=net)
+    assert nag["violations"] == []
+    t.resource_count_is("AWS::EC2::VPC", 0)
+    t.resource_count_is("AWS::EC2::SecurityGroup", 1)
+    with pytest.raises(pm.ParamsInvalid):
+        pm.existing_network("vpc-1", "subnet-0123456789abcdef0")

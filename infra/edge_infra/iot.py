@@ -123,6 +123,9 @@ def build(stack) -> None:
                    assumed_by=_trust("credentials.iot.amazonaws.com", alias_arn),
                    description="Greengrass token exchange role: read this project's component artifacts")
     tes.add_to_policy(iam.PolicyStatement(actions=["s3:GetObject"], resources=[f"{stack.bucket.bucket_arn}/gg-artifacts/*"]))
+    # Found in testing: the nucleus calls GetBucketLocation before downloading an artifact
+    # (deployment error S3_GET_BUCKET_LOCATION_ACCESS_DENIED without it).
+    tes.add_to_policy(iam.PolicyStatement(actions=["s3:GetBucketLocation"], resources=[stack.bucket.bucket_arn]))
     stack.tes_role = tes
     iot.CfnRoleAlias(stack, "GreengrassRoleAlias", role_alias=stack.role_alias_name, role_arn=tes.role_arn,
                      credential_duration_seconds=3600)

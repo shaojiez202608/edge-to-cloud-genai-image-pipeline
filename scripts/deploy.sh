@@ -14,6 +14,17 @@ CALLER=$(aws sts get-caller-identity --query Arn --output text)
 # Resource policies match IAM user/role ARNs, not STS sessions.
 OPERATOR=$(echo "$CALLER" | sed -E 's#^arn:(aws[a-z-]*):sts::([0-9]{12}):assumed-role/([^/]+)/.*#arn:\1:iam::\2:role/\3#')
 CTX=(-c "params=$PARAMS" -c "operator_principal_arns=$OPERATOR")
+if [ "${USE_DEFAULT_VPC:-}" = "1" ]; then
+  # The account cannot create another VPC: use the default VPC's public subnets in the configured AZs
+  # (read-only lookup; the VPC itself is not modified).
+  read -r REGION AZ1 AZ2 < <(python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["deploy"]; print(d["region"], *d["availability_zones"])' "$PARAMS")
+  VPC=$(aws ec2 describe-vpcs --region "$REGION" --filters Name=is-default,Values=true --query 'Vpcs[0].VpcId' --output text)
+  S1=$(aws ec2 describe-subnets --region "$REGION" --filters Name=vpc-id,Values="$VPC" Name=availability-zone,Values="$AZ1" --query 'Subnets[0].SubnetId' --output text)
+  S2=$(aws ec2 describe-subnets --region "$REGION" --filters Name=vpc-id,Values="$VPC" Name=availability-zone,Values="$AZ2" --query 'Subnets[0].SubnetId' --output text)
+  CTX+=(-c "existing_vpc_id=$VPC" -c "existing_subnet_ids=$S1,$S2")
+  echo "using the default VPC ($AZ1, $AZ2)"
+  mkdir -p .deploy && printf 'existing_vpc_id=%s\nexisting_subnet_ids=%s,%s\n' "$VPC" "$S1" "$S2" > .deploy/network.ctx
+fi
 export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 
 echo "== cdk diff"
