@@ -47,7 +47,7 @@ been fixed, with the fix), or **N/A** (with the reason). Evidence is `file:line`
 |---|---|---|
 | Cleanup script with confirmations (stack, then data), warn-and-continue; residual check fails on leftovers; README lists resources not removed automatically | Met | `scripts/cleanup.sh:21,60`, `scripts/cleanup_iot.py`, `scripts/verify_cleanup.py:224`, `README.md:111` |
 | IoT-specific cleanup: certificates (detach, INACTIVE, delete), policies, things, groups, rules, Greengrass deployments/components/core devices, jobs, Fargate tasks, ECR images | Met | `scripts/cleanup_iot.py`, stack (`empty_on_delete` ECR) |
-| All used regions checked, explicit conclusion | Met | `DEPLOYMENT-LOG.md` (us-east-1 only) |
+| All used regions checked, explicit conclusion | Changed | First residual check after destroy listed 2 IoT jobs and 4 Greengrass deployments (deletion limits) → cleanup retries added (`scripts/cleanup_iot.py`), second pass clean; conclusion "nothing left" in `DEPLOYMENT-LOG.md` (us-east-1 only) |
 | Bootstrap assets: only this project's objects (asset hashes) | Met | `scripts/verify_cleanup.py` (`project_asset_keys`), `scripts/cleanup.sh` |
 
 ## F. Documentation and commits
@@ -59,4 +59,4 @@ been fixed, with the fix), or **N/A** (with the reason). Evidence is `file:line`
 
 ## Summary
 
-Met: all items. Changed during development: 1 (dependency advisories, fixed). N/A: 0.
+Met: all other items. Changed during development: 2 (dependency advisories; cleanup deletion limits), both fixed and verified. N/A: 0.
