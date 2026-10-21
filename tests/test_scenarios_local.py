@@ -72,3 +72,23 @@ def test_d6_injection_set_with_naive_and_robust_models():
 def test_d6_negative_control_must_fail():
     r = evaluate("naive", negative_control=True)
     assert len(r["failed"]) >= 8  # the evaluation detects a disabled defence
+
+
+def test_provisioning_connect_failure_is_a_provisioning_failure():
+    import pytest
+
+    from edge_pipeline.simulator.provisioning import ProvisioningFailed, provision
+    from edge_pipeline.simulator.transport import ConnectError
+
+    class Down:
+        on_lost = None
+
+        async def connect(self, timeout_s=10):
+            raise ConnectError("AWS_IO_SOCKET_TIMEOUT")
+
+        async def disconnect(self):
+            return None
+
+    with pytest.raises(ProvisioningFailed) as e:
+        asyncio.run(provision(Down(), "tmpl", "000001"))
+    assert e.value.code == "connect_AWS_IO_SOCKET_TIMEOUT"

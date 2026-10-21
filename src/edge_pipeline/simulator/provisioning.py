@@ -10,7 +10,7 @@ import asyncio
 import json
 from dataclasses import dataclass
 
-from .transport import Transport, decode
+from .transport import ConnectError, Transport, decode
 
 CREATE = "$aws/certificates/create/json"
 
@@ -41,7 +41,10 @@ async def provision(t: Transport, template: str, serial: str, timeout_s: float =
                 fut.set_result((topic.rsplit("/", 1)[-1], decode(payload)))
         return handler
 
-    await t.connect()
+    try:
+        await t.connect()
+    except ConnectError as exc:  # found in testing: socket timeouts must not end the whole simulator task
+        raise ProvisioningFailed(f"connect_{exc.code}") from None
     try:
         for name, base in (("create", CREATE), ("provision", prov)):
             for suffix in ("accepted", "rejected"):

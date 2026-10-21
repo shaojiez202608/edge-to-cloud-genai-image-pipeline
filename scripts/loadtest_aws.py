@@ -88,6 +88,7 @@ def run_one(ctx: Ctx, p: dict, strategy: str, outage_s: float) -> dict:
     rec = [x for r in reps for x in r.get("reconnect_samples", [])]
     agg = {
         "run_id": rid, "strategy": strategy, "tasks": len(arns), "task_exit_codes": [s["exit"] for s in status.values()],
+        "task_stop_reasons": sorted({s["reason"][:40] for s in status.values()}), "tasks_reported": len(reps),
         "devices_requested": p["devices"], "provisioned": sum(r.get("provisioned", 0) for r in reps),
         "initial_connected": sum(r.get("initial_connected", 0) for r in reps),
         "reconnect_attempted": sum(r.get("reconnect_attempted", 0) for r in reps),
