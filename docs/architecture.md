@@ -155,6 +155,7 @@ Verified against official documentation on **2026-10-21** unless marked "found i
 | T6 | Bedrock Guardrails with the image prompt-attack filter blocked most synthetic injection images while passing the benign ones | Found in testing (VERIFICATION.md, D6) |
 | T7 | IoT Jobs executions exist only for devices the rollout reached; after an abort the rest have no execution record | Found in testing |
 | T8 | `AttachThingPrincipal` is eventually consistent: an immediate connect can be refused | Found in testing |
+| T9 | At most 10 IoT jobs can be in deletion at the same time; Greengrass `DeleteDeployment` is throttled by the IoT Jobs deletion quota | Found in testing (cleanup) |
 
 Statements that could not be verified were removed from the repository: no concrete quota, price,
 latency or throughput figures appear anywhere.

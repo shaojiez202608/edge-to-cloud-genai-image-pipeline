@@ -10,6 +10,9 @@ results are described qualitatively.
 
 - Stack, Lambda bundle, both container images and the scripts of every cloud run: **59a9927** (the
   last code commit). Everything after 59a9927 is documentation only.
+- Commits after 59a9927 that are not documentation: `f758f4d` (a repository text test; tests only) and
+  `e3c46d1` (cleanup script: concurrency and retries, used for the second cleanup pass). Neither changes
+  anything that was deployed or measured.
 - Earlier runs of the same day on previous commits found the issues listed under "Found in testing";
   their reports are kept in `out/` but are not the recorded result.
 
@@ -124,6 +127,20 @@ and are intentionally not reproduced here.
 | T7 | Thing attachment eventually consistent; stale core status; transient image-pull timeout | Retries and fresh-status checks (`34620a5`, `2e0a228`) |
 | T8 | Repeated runs hit the per-device hourly upload limit (`rate_limited`) — the abuse control working | Fresh identities per e2e run (`0cec10d`) |
 | T9 | Under load, a claim connection socket timeout ended the whole simulator task | Treated as a provisioning failure and retried (`59a9927`) |
+| T10 | Cleanup: at most 10 IoT jobs can be deleting at once; Greengrass DeleteDeployment is throttled by the same quota; thousands of certificates are slow to remove one by one | Retries with backoff and bounded concurrency (`e3c46d1`); see DEPLOYMENT-LOG |
+
+## Cleanup
+
+`make destroy` followed by `make verify-cleanup`: first residual check listed 2 IoT jobs and 4 Greengrass
+deployments (deletion limits, T10); after a second IoT cleanup pass the residual check reported
+**"Cleaned up: nothing of this project remains in the checked regions"** (us-east-1). Details in
+DEPLOYMENT-LOG.md.
+
+## Repository self-check
+
+Run on the final commit (results in the hand-over report): history grep for local paths, personal mail
+domains and internal wording; project-specific terms from the local, git-ignored list; single author and
+committer; Conventional Commit subjects; no 12-digit numbers other than the placeholder in history or tree.
 
 ## What these results do not prove
 

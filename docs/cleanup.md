@@ -21,6 +21,11 @@ prints a warning and the script continues.
    objects in the CDK bootstrap assets bucket (keys from the saved asset manifests; CDK's generic
    provider packages and the CDKToolkit stack are not touched).
 
+Large fleets: certificates and things are removed with bounded concurrency; IoT allows only a limited
+number of jobs in deletion at once and throttles Greengrass deployment deletion, so the script retries
+with backoff. If the residual check still lists jobs or deployments, run
+`uv run python scripts/cleanup_iot.py` again after a few minutes.
+
 ## Residual check
 
 `make verify-cleanup` (`scripts/verify_cleanup.py`, read-only) checks the stack, buckets (with
