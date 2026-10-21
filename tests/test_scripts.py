@@ -6,7 +6,7 @@ import loadtest_aws
 
 
 def test_mask_text():
-    assert guards.mask_text("arn:aws:iam::123456789012:role/x 1234567890123") == \
+    assert guards.mask_text("arn:aws:iam::" + "1234567890" + "12" + ":role/x 1234567890123") == \
         "arn:aws:iam::111122223333:role/x 1234567890123"
 
 

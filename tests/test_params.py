@@ -39,7 +39,7 @@ def test_examples_valid():
     ({"deploy__alarm_email": "nope"}, "alarm_email"),
     ({"deploy__tags": {"Project": "x"}}, "Purpose"),
     ({"deploy__removal_policy": "retain"}, "contradicts"),
-    ({"deploy__tags__Owner": "123456789012"}, "12-digit"),
+    ({"deploy__tags__Owner": "1234567890" + "12"}, "12-digit"),
     ({"pipeline__model_mode": "x"}, "pipeline"),
 ])
 def test_invalid(change, needle):

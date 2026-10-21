@@ -23,3 +23,6 @@ cdk.context.json
 *.local.json
 # Generated synthetic images (regenerate with `make eval-data`)
 sample-data/injection/*.png
+
+# Local list of project-specific forbidden terms (never committed)
+.forbidden-terms
