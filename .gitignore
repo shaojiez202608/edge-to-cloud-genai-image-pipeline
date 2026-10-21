@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+cdk.out/
+build/
+node_modules/
+*.zip
+out/
+.deploy/
+.DS_Store
+*.pem
+*.key
+*.crt
+.env
+.env*
+!.env.example
+# Live parameter files (copies of config/*.example.json created by `make init`)
+config/sandbox.json
+config/handover.json
+cdk.context.json
+*.local.json
+# Generated synthetic images (regenerate with `make eval-data`)
+sample-data/injection/*.png

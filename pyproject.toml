@@ -1,0 +1,54 @@
+[project]
+name = "edge-to-cloud-genai-image-pipeline"
+version = "0.1.0"
+description = "Edge-to-cloud generative image pipeline: simulated edge boxes, AWS IoT Core, Amazon Bedrock (prototype)"
+readme = "README.md"
+license = "MIT-0"
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+# Lambda runtime dependencies are also listed in src/functions/requirements.txt (arm64 bundle).
+runtime = [
+  "boto3>=1.40",
+  "pillow>=11",
+  "jsonschema>=4.23",
+]
+# Device simulator (also installed in the arm64 simulator image, containers/simulator/requirements.txt).
+sim = [
+  "awsiotsdk>=1.22",
+]
+dev = [
+  "pytest>=8",
+  "ruff>=0.6",
+]
+infra = [
+  "aws-cdk-lib>=2.200",
+  "constructs>=10.4",
+  "cdk-nag>=2.37",
+]
+
+[tool.uv]
+# Supply-chain cooldown: do not resolve package versions published in the last 7 days.
+exclude-newer = "7 days"
+package = false
+default-groups = ["runtime", "sim", "dev", "infra"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "infra", "scripts", "."]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+extend-exclude = ["cdk.out", "build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = ["S101", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S"]
+"scripts/**" = ["S311", "S603", "S607"]
+"src/edge_pipeline/simulator/**" = ["S311"]

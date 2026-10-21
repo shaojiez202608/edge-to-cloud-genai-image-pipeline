@@ -1,0 +1,7 @@
+# gitleaks configuration: the default rule set, no exceptions.
+# The full history and the working tree have no findings, so nothing is allowlisted. Any future
+# exception must name one rule id and one path (or one commit) and give the reason next to it.
+title = "edge-to-cloud-genai-image-pipeline"
+
+[extend]
+useDefault = true
