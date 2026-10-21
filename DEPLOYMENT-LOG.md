@@ -31,7 +31,8 @@ SQS `proto-edge-ingest`, `-ingest-dlq`, `-telemetry`, `-rule-errors`; seven Lamb
 `proto-edge-guardrail` and a version; IoT policies `proto-edge-device`, `proto-edge-claim`,
 `proto-edge-gg-0{1,2,3}-policy`; thing groups `proto-edge-sim-fleet`, `proto-edge-gg-fleet`; provisioning
 template `proto-edge-sim-fleet` and its role; four topic rules `proto_edge_*` and their role; role alias
-`proto-edge-gg-tes` and its role; secrets `proto-edge/claim`, `proto-edge/gg/*`; security group
+`proto-edge-gg-tes` and its role; Secrets Manager entries for the claim and core certificates (names under
+the `proto-edge/` prefix); security group
 `proto-edge-simulators` (in the default VPC, which was not modified); ECS cluster `proto-edge-sim`; task
 definitions `proto-edge-simulator`, `proto-edge-greengrass`; ECR `proto-edge-simulator`,
 `proto-edge-greengrass`; CodeBuild `proto-edge-images`; SNS `proto-edge-alarms`; five alarms; dashboard;

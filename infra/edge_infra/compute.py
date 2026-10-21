@@ -70,8 +70,8 @@ def build(stack, image_src_dir: str) -> None:
             "IMAGE_TAG": stack.image_tag,
             "SIM_REPO": stack.repos["simulator"].repository_uri,
             "GG_REPO": stack.repos["greengrass"].repository_uri,
-            "NUCLEUS_VERSION": gg["nucleus_version"], "NUCLEUS_SHA256": gg["nucleus_sha256"],
-            "GG_DOCKER_COMMIT": gg["docker_repo_commit"]}.items()},
+            "NUCLEUS_VERSION": gg["nucleus_version"], "NUCLEUS_SHA256": gg["nucleus_sha256"].removeprefix("sha256:"),
+            "GG_DOCKER_COMMIT": gg["docker_repo_commit"].removeprefix("git:")}.items()},
         logging=codebuild.LoggingOptions(cloud_watch=codebuild.CloudWatchLoggingOptions(log_group=cb_logs)),
         timeout=Duration.minutes(45))
     for repo in stack.repos.values():
@@ -97,7 +97,7 @@ def build(stack, image_src_dir: str) -> None:
             "REPORT_BUCKET": stack.bucket.bucket_name}),
         "greengrass": (d["greengrass_task"], gg_role, {
             **common_env, "ROLE_ALIAS": stack.role_alias_name, "GGC_ROOT_PATH": "/greengrass/v2",
-            "PROVISION": "false", "COMPONENT_DEFAULT_USER": "ggc_user:ggc_group", "INIT_CONFIG": "/tmp/config/config.yaml"}),  # noqa: S108 - path inside the container
+            "PROVISION": "false", "COMPONENT_DEFAULT_USER": "ggc_user:ggc_group", "INIT_CONFIG": "/opt/edge-config/config.yaml"}),
     }
     for kind, (size, role, env) in specs.items():
         td = ecs.FargateTaskDefinition(

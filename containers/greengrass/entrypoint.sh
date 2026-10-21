@@ -3,7 +3,7 @@
 # Inputs (task definition / run-task overrides): THING_NAME, GG_SECRET_ID, IOT_DATA_ENDPOINT,
 # IOT_CRED_ENDPOINT, ROLE_ALIAS, AWS_REGION. The secret holds {"certificatePem", "privateKey"}.
 set -eu
-CFG_DIR=/tmp/config
+CFG_DIR=/opt/edge-config  # created 0700 in the image; not a shared temporary directory
 mkdir -p "$CFG_DIR"
 umask 077
 SECRET=$(aws secretsmanager get-secret-value --secret-id "$GG_SECRET_ID" --query SecretString --output text)

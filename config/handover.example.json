@@ -20,8 +20,8 @@
     "greengrass_task": {"cpu": 1024, "memory_mb": 2048},
     "greengrass": {
       "nucleus_version": "2.17.0",
-      "nucleus_sha256": "7bfc1774d30b791b74fd67b143ed4eb4f04fa2f624f422b5899aeca84cfde1af",
-      "docker_repo_commit": "c84c544ddbf854cbdd1798b1a4ace6af510a1bec"
+      "nucleus_sha256": "sha256:7bfc1774d30b791b74fd67b143ed4eb4f04fa2f624f422b5899aeca84cfde1af",
+      "docker_repo_commit": "git:c84c544ddbf854cbdd1798b1a4ace6af510a1bec"
     },
     "budget": {"enabled": false},
     "alarm_email": null,
